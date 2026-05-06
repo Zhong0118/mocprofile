@@ -1,0 +1,58 @@
+import type { Repository } from '@/types/content';
+
+export const repositories: Repository[] = [
+  {
+    name: 'aigc-detection',
+    description: '多模态 AIGC 内容检测工具库，支持图像和文本检测。',
+    url: 'https://github.com/yourname/aigc-detection',
+    language: 'Python',
+    stars: 128,
+    forks: 23,
+    tags: ['AIGC', 'Detection', 'PyTorch'],
+  },
+  {
+    name: 'agentsec-toolkit',
+    description: 'LLM Agent 安全性评估框架与测试工具箱。',
+    url: 'https://github.com/yourname/agentsec-toolkit',
+    language: 'Python',
+    stars: 87,
+    forks: 15,
+    tags: ['LLM', 'Security', 'Agent'],
+  },
+  {
+    name: 'academic-homepage',
+    description: '基于 React + Tailwind CSS 的个人学术主页模板。',
+    url: 'https://github.com/yourname/academic-homepage',
+    language: 'TypeScript',
+    stars: 56,
+    forks: 12,
+    tags: ['React', 'Portfolio', 'Template'],
+  },
+  {
+    name: 'model-fingerprint',
+    description: '深度学习模型指纹提取与溯源工具。',
+    url: 'https://github.com/yourname/model-fingerprint',
+    language: 'Python',
+    stars: 42,
+    forks: 8,
+    tags: ['Model Attribution', 'Fingerprint'],
+  },
+  {
+    name: 'prompt-injection-benchmark',
+    description: '提示注入攻击基准数据集与评估脚本。',
+    url: 'https://github.com/yourname/prompt-injection-benchmark',
+    language: 'Python',
+    stars: 35,
+    forks: 6,
+    tags: ['Prompt Injection', 'Benchmark'],
+  },
+  {
+    name: 'blog-source',
+    description: '个人技术博客源码与文章合集。',
+    url: 'https://github.com/yourname/blog-source',
+    language: 'Markdown',
+    stars: 18,
+    forks: 3,
+    tags: ['Blog', 'Notes'],
+  },
+];

@@ -1,0 +1,58 @@
+import type { Repository } from '@/types/content';
+
+export const repositories: Repository[] = [
+  {
+    name: 'aigc-detection',
+    description: 'Multimodal AIGC content detection toolkit for images and text.',
+    url: 'https://github.com/yourname/aigc-detection',
+    language: 'Python',
+    stars: 128,
+    forks: 23,
+    tags: ['AIGC', 'Detection', 'PyTorch'],
+  },
+  {
+    name: 'agentsec-toolkit',
+    description: 'LLM Agent security evaluation framework and testing toolkit.',
+    url: 'https://github.com/yourname/agentsec-toolkit',
+    language: 'Python',
+    stars: 87,
+    forks: 15,
+    tags: ['LLM', 'Security', 'Agent'],
+  },
+  {
+    name: 'academic-homepage',
+    description: 'Personal academic homepage template built with React + Tailwind CSS.',
+    url: 'https://github.com/yourname/academic-homepage',
+    language: 'TypeScript',
+    stars: 56,
+    forks: 12,
+    tags: ['React', 'Portfolio', 'Template'],
+  },
+  {
+    name: 'model-fingerprint',
+    description: 'Deep learning model fingerprint extraction and attribution tool.',
+    url: 'https://github.com/yourname/model-fingerprint',
+    language: 'Python',
+    stars: 42,
+    forks: 8,
+    tags: ['Model Attribution', 'Fingerprint'],
+  },
+  {
+    name: 'prompt-injection-benchmark',
+    description: 'Prompt injection attack benchmark dataset and evaluation scripts.',
+    url: 'https://github.com/yourname/prompt-injection-benchmark',
+    language: 'Python',
+    stars: 35,
+    forks: 6,
+    tags: ['Prompt Injection', 'Benchmark'],
+  },
+  {
+    name: 'blog-source',
+    description: 'Personal tech blog source code and article collection.',
+    url: 'https://github.com/yourname/blog-source',
+    language: 'Markdown',
+    stars: 18,
+    forks: 3,
+    tags: ['Blog', 'Notes'],
+  },
+];
