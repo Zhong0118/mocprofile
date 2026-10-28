@@ -1,103 +1,153 @@
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
-import { GithubIcon } from '@/components/common/GithubIcon';
-import { useContent } from '@/hooks/useContent';
-import { PageLayout } from '@/components/layout/PageLayout';
-import { Tag } from '@/components/common/Tag';
-import { ExternalLinkButton } from '@/components/common/ExternalLinkButton';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
+import { directionsOfProject, findProjectDetail, relatedProjects } from '@/content/selectors';
+import { useSite } from '@/site/context';
+import { useHydrated } from '@/site/hydration';
+import { lastListUrl } from '@/site/nav-memory';
+import { captureShared } from '@/site/shared-element';
+import { projectsPath } from '@/routing/paths';
+import { useProjectMeta, ProjectCard } from '@/components/ProjectCard';
+import { MetaLine } from '@/components/MetaLine';
+import { TagList } from '@/components/ui';
+import { BackLink, DetailSections } from './PageParts';
+import NotFoundPage from './NotFoundPage';
+
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export default function ProjectDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const { content } = useContent();
+  const { id = '' } = useParams();
+  const { bundle } = useSite();
+  const project = findProjectDetail(bundle, id);
+  if (!project) return <NotFoundPage />;
+  return <ProjectCase id={project.id} />;
+}
 
-  if (!content) {
-    return (
-      <PageLayout>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" />
-        </div>
-      </PageLayout>
-    );
-  }
+/** Highlights the table-of-contents entry for the section being read. */
+function useCurrentSection(ids: string[]) {
+  const [current, setCurrent] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const offset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) + 40;
+      let found: string | undefined;
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top - offset <= 0) found = id;
+      }
+      setCurrent(found ?? ids[0]);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [ids.join()]);
+  return current;
+}
 
-  const project = content.projects.find((p) => p.id === id);
-  const { common } = content;
-
-  if (!project) {
-    return (
-      <PageLayout>
-        <div className="mx-auto max-w-3xl py-16 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {common.notFoundTitle}
-          </h1>
-          <p className="mt-2 text-gray-500 dark:text-gray-400">
-            {common.notFoundDescription}
-          </p>
-          <Link
-            to="/"
-            className="mt-4 inline-flex items-center gap-2 text-sky-600 hover:text-sky-700 dark:text-sky-400"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {common.backToHome}
-          </Link>
-        </div>
-      </PageLayout>
-    );
-  }
+function ProjectCase({ id }: { id: string }) {
+  const { bundle, locale, t } = useSite();
+  const project = findProjectDetail(bundle, id)!;
+  const text = t.projects[id];
+  const ui = t.ui;
+  const meta = useProjectMeta(project);
+  const sections = text.sections ?? [];
+  const current = useCurrentSection(sections.map((s) => s.id));
+  const related = relatedProjects(bundle, id);
+  const directions = directionsOfProject(bundle, id);
+  const hydrated = useHydrated();
+  // The prerendered link points at the plain directory; after hydration it carries the last filters.
+  const back = (hydrated && lastListUrl('projects')) || projectsPath(locale);
+  // Before the page is removed (back, or any link away), remember the header's box so the matching
+  // card on the next page can settle from it. Layout-effect cleanups run while the DOM is still here.
+  const headerRef = useRef<HTMLElement>(null);
+  useIsoLayoutEffect(() => {
+    const el = headerRef.current;
+    return () => captureShared(id, el);
+  }, [id]);
 
   return (
-    <PageLayout>
-      <div className="mx-auto max-w-3xl">
-        <Link
-          to="/"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {common.backToHome}
-        </Link>
+    <article className="page-wrap">
+      <div className="page-top">
+        <BackLink to={back} label={ui.detail.backToProjects} />
+      </div>
 
-        <div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm dark:border-gray-700/60 dark:bg-gray-900 sm:p-8">
-          <div className="flex items-start gap-2">
-            <Tag variant="outline">{project.status}</Tag>
-            <Tag variant="outline">{project.year}</Tag>
-          </div>
-
-          <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {project.title}
-          </h1>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">
-            {project.subtitle}
+      <header ref={headerRef} data-shared-id={project.id} data-shared-role="detail" className="card card-surface mt-3">
+        <p className="t-eyebrow">
+          {[ui.project.kind[project.kind], ...directions.map((d) => t.directions[d.id].label)].join(' · ')}
+        </p>
+        <h1 className="t-h1 mt-2" lang="en">
+          {project.name}
+        </h1>
+        <MetaLine className="mt-2" items={meta} />
+        <p className="t-lead measure mt-4">{text.summary}</p>
+        {text.roleNote && (
+          <p className="t-caption measure mt-3 text-muted">
+            {ui.project.role}
+            {ui.colon}
+            {text.roleNote}
           </p>
-
-          {project.image && (
-            <img
-              src={project.image}
-              alt={project.title}
-              className="mt-6 w-full rounded-xl object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          )}
-
-          <div className="mt-6">
-            <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-              {project.description}
-            </p>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {project.techStack.map((tech) => (
-              <Tag key={tech}>{tech}</Tag>
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            <ExternalLinkButton href={project.links.demo} label={common.viewDemo} icon={ExternalLink} />
-            <ExternalLinkButton href={project.links.github} label={common.viewOnGithub} icon={GithubIcon} variant="outline" />
+        )}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <TagList items={project.techStack ?? []} max={6} />
+          <div className="flex flex-wrap gap-2">
+            {project.resources.code && (
+              <a href={project.resources.code} className="btn btn-primary print-url" data-print-url={project.resources.code}>
+                {ui.resources.viewCode}
+                <ArrowUpRight size={18} strokeWidth={1.85} aria-hidden="true" />
+              </a>
+            )}
+            {project.resources.release && (
+              <a href={project.resources.release} className="btn btn-secondary btn-hero">
+                {ui.resources.getRelease}
+              </a>
+            )}
           </div>
         </div>
+      </header>
+
+      <div className="grid-layout mt-10 lg:mt-12">
+        {sections.length > 1 && (
+          <nav aria-label={ui.detail.contents} className="col-span-full hidden lg:col-span-3 lg:block">
+            <div className="toc">
+              <p className="t-caption mb-2 font-semibold text-fg-2">{ui.detail.contents}</p>
+              <ol>
+                {sections.map((s) => (
+                  <li key={s.id}>
+                    <a href={`#${s.id}`} aria-current={current === s.id ? 'true' : undefined}>
+                      {s.heading}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </nav>
+        )}
+        <div className="col-span-full min-w-0 lg:col-span-9 lg:max-w-[52rem]">
+          <DetailSections sections={sections} />
+        </div>
       </div>
-    </PageLayout>
+
+      {related.length > 0 && (
+        <section aria-labelledby="related-title" className="module mt-12 border-t border-border">
+          <h2 id="related-title" className="t-h2 mb-5">
+            {ui.detail.related}
+          </h2>
+          <ul className="grid-layout">
+            {related.map((p) => (
+              <li key={p.id} className="col-span-full md:col-span-4 lg:col-span-4">
+                <ProjectCard project={p} anchor={false} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </article>
   );
 }

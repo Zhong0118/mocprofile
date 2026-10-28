@@ -1,206 +1,245 @@
-import { useContent } from '@/hooks/useContent';
-import { PageLayout } from '@/components/layout/PageLayout';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { Section } from '@/components/layout/Section';
-import { SectionTitle } from '@/components/common/SectionTitle';
-import { Tag } from '@/components/common/Tag';
-import { PublicationCard } from '@/components/cards/PublicationCard';
-import { ProjectCard } from '@/components/cards/ProjectCard';
-import { RepositoryCard } from '@/components/cards/RepositoryCard';
-import { ExperienceCard } from '@/components/cards/ExperienceCard';
-import { AwardCard } from '@/components/cards/AwardCard';
-import { Mail, FileText } from 'lucide-react';
-import { GithubIcon } from '@/components/common/GithubIcon';
+import { Link } from 'react-router-dom';
+import { ArrowRight, ArrowUpRight, FileText } from 'lucide-react';
+import {
+  allAwards,
+  featuredProjects,
+  formatDate,
+  homepageExperience,
+  homepagePublications,
+  homepageRepositories,
+  isModuleEnabled,
+} from '@/content/selectors';
+import type { ModuleId } from '@/content/types';
+import { useSite } from '@/site/context';
+import { aboutPath, cvPath, projectsPath, publicationsPath, repositoriesPath } from '@/routing/paths';
+import { ResearchMap } from '@/components/ResearchMap';
+import { DirectionCards } from '@/components/DirectionCards';
+import { ProjectCard } from '@/components/ProjectCard';
+import { PublicationEntry } from '@/components/PublicationEntry';
+import { SkillExplorer } from '@/components/SkillExplorer';
+import { RepositoryCard } from '@/components/RepositoryCard';
+import { ExperienceEntry } from '@/components/ExperienceEntry';
+import { AwardEntry } from '@/components/AwardEntry';
+import { ContactBlock } from '@/components/ContactBlock';
+import { EmptyState, ModuleSection } from '@/components/ui';
 
-export default function HomePage() {
-  const { content } = useContent();
-
-  if (!content) {
-    return (
-      <PageLayout>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" />
-        </div>
-      </PageLayout>
-    );
-  }
-
-  const { profile, publications, projects, repositories, experience, awards, cv, common } = content;
+function Hero() {
+  const { bundle, locale, t } = useSite();
+  const { person } = bundle;
+  const ui = t.ui;
 
   return (
-    <PageLayout>
-      <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
-        <Sidebar profile={profile} common={common} />
+    <section id="about" data-section aria-labelledby="about-title" className="hero">
+      <div className="grid-layout items-center gap-y-8">
+        <div className="col-span-full lg:col-span-7">
+          {t.person.identity?.map((line) => (
+            <p key={line} className="t-meta font-medium text-fg-2">
+              {line}
+            </p>
+          ))}
+          <h1 id="about-title" className="t-display mt-3">
+            {person.displayName}
+          </h1>
+          {person.handle && (
+            <p className="t-meta mt-2 text-muted">
+              GitHub <span lang="en">@{person.handle}</span>
+            </p>
+          )}
+          <p className="t-tagline mt-5">
+            {t.person.tagline.map((line, i) => (
+              <span key={line} className="block">
+                {line}
+                {i < t.person.tagline.length - 1 && <span className="sr-only">，</span>}
+              </span>
+            ))}
+          </p>
+          <p className="t-body measure mt-4 text-fg-2">{t.person.intro}</p>
 
-        <main className="space-y-16">
-          {/* Hero */}
-          <Section id="hero">
-            <div className="rounded-2xl border border-gray-200/60 bg-white p-8 shadow-sm dark:border-gray-700/60 dark:bg-gray-900">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {common.heroGreeting}{' '}
-                <span className="bg-gradient-to-r from-sky-600 to-cyan-500 bg-clip-text text-transparent">
-                  {profile.name}
-                </span>
-              </h2>
-              <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
-                {common.heroDescription}
-              </p>
-            </div>
-          </Section>
+          <ul className="mt-5 flex flex-wrap gap-2" aria-label={ui.hero.directionsLabel}>
+            {bundle.directions.map((d) => (
+              <li key={d.id}>
+                <Link to={`#direction-${d.id}`} className="tag tag-accent h-9 px-3 text-[0.875rem] hover:text-accent-hover">
+                  {t.directions[d.id].label}
+                </Link>
+              </li>
+            ))}
+          </ul>
 
-          {/* About */}
-          <Section id="about">
-            <SectionTitle title={common.aboutTitle} />
-            <div className="space-y-3">
-              {common.aboutContent.map((text, i) => (
-                <p
-                  key={i}
-                  className="text-sm leading-relaxed text-gray-600 dark:text-gray-400"
-                >
-                  {text}
-                </p>
-              ))}
-            </div>
-          </Section>
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            {isModuleEnabled(bundle, 'projects') && (
+              <Link to={projectsPath(locale)} className="btn btn-primary">
+                {ui.hero.primary}
+                <ArrowRight size={18} strokeWidth={1.85} aria-hidden="true" />
+              </Link>
+            )}
+            {isModuleEnabled(bundle, 'cv') && (
+              <Link to={cvPath(locale)} className="btn btn-secondary btn-hero">
+                <FileText size={18} strokeWidth={1.75} aria-hidden="true" />
+                {ui.hero.secondary}
+              </Link>
+            )}
+            <span className="flex items-center gap-1 sm:ml-2">
+              {person.links.github && (
+                <a href={person.links.github} className="text-action px-2 text-fg-2 hover:text-accent">
+                  {ui.resources.github}
+                  <ArrowUpRight size={15} strokeWidth={1.85} aria-hidden="true" />
+                </a>
+              )}
+              {person.links.blog && (
+                <a href={person.links.blog} className="text-action px-2 text-fg-2 hover:text-accent">
+                  {ui.nav.blog}
+                  <ArrowUpRight size={15} strokeWidth={1.85} aria-hidden="true" />
+                </a>
+              )}
+            </span>
+          </div>
+        </div>
+        <div className="col-span-full lg:col-span-5">
+          <ResearchMap />
+        </div>
+      </div>
+    </section>
+  );
+}
 
-          {/* Research Interests */}
-          <Section id="research">
-            <SectionTitle title={common.researchInterestsTitle} />
-            <div className="flex flex-wrap gap-2">
-              {profile.researchInterests.map((interest) => (
-                <Tag key={interest}>{interest}</Tag>
-              ))}
-            </div>
-          </Section>
+export default function HomePage() {
+  const { bundle, locale, t } = useSite();
+  const ui = t.ui;
+  const on = (id: ModuleId) => isModuleEnabled(bundle, id);
+  const featured = featuredProjects(bundle);
+  const [main, ...side] = featured;
+  const repos = homepageRepositories(bundle);
+  const pubs = homepagePublications(bundle);
+  const experience = homepageExperience(bundle);
+  const awards = allAwards(bundle);
 
-          {/* Publications */}
-          <Section id="publications">
-            <SectionTitle
-              title={common.publicationsTitle}
-              subtitle={common.publicationsSubtitle}
-            />
-            <div className="space-y-4">
-              {publications.map((pub) => (
-                <PublicationCard key={pub.id} publication={pub} common={common} />
-              ))}
-            </div>
-          </Section>
+  return (
+    <div className="page-wrap">
+      <Hero />
 
-          {/* Projects */}
-          <Section id="projects">
-            <SectionTitle
-              title={common.projectsTitle}
-              subtitle={common.projectsSubtitle}
-            />
-            <div className="space-y-4">
-              {projects.map((proj) => (
-                <ProjectCard key={proj.id} project={proj} common={common} />
-              ))}
-            </div>
-          </Section>
+      {on('research') && (
+        <ModuleSection id="research" title={ui.modules.research} lead={ui.moduleLead.research} action={{ label: ui.more.about, to: aboutPath(locale) }}>
+          <DirectionCards />
+        </ModuleSection>
+      )}
 
-          {/* GitHub */}
-          <Section id="github">
-            <SectionTitle
-              title={common.githubTitle}
-              subtitle={common.githubSubtitle}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              {repositories.slice(0, 6).map((repo) => (
-                <RepositoryCard key={repo.name} repository={repo} common={common} />
-              ))}
-            </div>
-          </Section>
-
-          {/* Experience */}
-          <Section id="experience">
-            <SectionTitle
-              title={common.experienceTitle}
-              subtitle={common.experienceSubtitle}
-            />
-            <div className="space-y-6">
-              {experience.map((exp, i) => (
-                <ExperienceCard key={i} experience={exp} />
-              ))}
-            </div>
-          </Section>
-
-          {/* Awards */}
-          <Section id="awards">
-            <SectionTitle
-              title={common.awardsTitle}
-              subtitle={common.awardsSubtitle}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              {awards.map((award, i) => (
-                <AwardCard key={i} award={award} />
-              ))}
-            </div>
-          </Section>
-
-          {/* CV */}
-          <Section id="cv">
-            <SectionTitle
-              title={common.cvTitle}
-              subtitle={common.cvSubtitle}
-            />
-            <div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm dark:border-gray-700/60 dark:bg-gray-900">
-              <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-                {cv.summary}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {cv.skills.map((skill) => (
-                  <Tag key={skill}>{skill}</Tag>
+      {on('projects') && (
+        <ModuleSection
+          id="projects"
+          title={ui.modules.projects}
+          lead={ui.moduleLead.projects}
+          action={{ label: ui.more.projects(bundle.projects.length), to: projectsPath(locale) }}
+        >
+          {main ? (
+            <div className="grid-layout">
+              <ProjectCard project={main} variant="feature" className="col-span-full lg:col-span-8" anchor={false} />
+              <div className="col-span-full grid gap-[var(--gap)] md:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
+                {side.map((p) => (
+                  <ProjectCard key={p.id} project={p} variant="side" anchor={false} />
                 ))}
               </div>
-              <div className="mt-4">
-                <a
-                  href={cv.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600"
-                >
-                  <FileText className="h-4 w-4" />
-                  {common.downloadCV}
-                </a>
-              </div>
             </div>
-          </Section>
+          ) : (
+            <EmptyState />
+          )}
+        </ModuleSection>
+      )}
 
-          {/* Contact */}
-          <Section id="contact">
-            <SectionTitle
-              title={common.contactTitle}
-              subtitle={common.contactSubtitle}
-            />
-            <div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm dark:border-gray-700/60 dark:bg-gray-900">
-              <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-                {common.contactDescription}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <a
-                  href={`mailto:${profile.email}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600"
-                >
-                  <Mail className="h-4 w-4" />
-                  {profile.email}
-                </a>
-                {profile.github && (
-                  <a
-                    href={profile.github}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                  >
-                    <GithubIcon className="h-4 w-4" />
-                    GitHub
-                  </a>
-                )}
-              </div>
+      {on('publications') && (
+        <ModuleSection
+          id="publications"
+          title={ui.modules.publications}
+          action={pubs.length ? { label: ui.more.publications, to: publicationsPath(locale) } : undefined}
+        >
+          {pubs.length ? (
+            <ol className="space-y-7">
+              {pubs.map((p) => (
+                <li key={p.id}>
+                  <PublicationEntry pub={p} />
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <EmptyState />
+          )}
+        </ModuleSection>
+      )}
+
+      {on('skills') && (
+        <ModuleSection id="skills" title={ui.modules.skills} lead={ui.moduleLead.skills}>
+          <SkillExplorer idPrefix="home-skills" />
+        </ModuleSection>
+      )}
+
+      {on('repositories') && (
+        <ModuleSection
+          id="github"
+          title={ui.modules.repositories}
+          lead={ui.moduleLead.repositories}
+          action={{ label: ui.more.repositories(bundle.repositories.length), to: repositoriesPath(locale) }}
+        >
+          {repos.length ? (
+            <ul className="grid-layout">
+              {repos.map((r) => (
+                <li key={r.id} className="col-span-full md:col-span-4 lg:col-span-3">
+                  <RepositoryCard repo={r} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState />
+          )}
+        </ModuleSection>
+      )}
+
+      {on('experience') && (
+        <ModuleSection id="experience" title={ui.modules.experience}>
+          {experience.length ? (
+            <div className="space-y-6">
+              {experience.map((e) => (
+                <ExperienceEntry key={e.id} item={e} />
+              ))}
             </div>
-          </Section>
-        </main>
-      </div>
-    </PageLayout>
+          ) : (
+            <EmptyState />
+          )}
+        </ModuleSection>
+      )}
+
+      {on('awards') && (
+        <ModuleSection id="awards" title={ui.modules.awards}>
+          {awards.length ? (
+            <div className="space-y-5">
+              {awards.map((a) => (
+                <AwardEntry key={a.id} award={a} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState />
+          )}
+        </ModuleSection>
+      )}
+
+      {on('cv') && (
+        <ModuleSection id="cv" title={ui.modules.cv}>
+          <div className="card card-surface flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="t-small">{ui.cv.summary}</p>
+              <p className="t-caption mt-1 text-muted">{ui.cv.updatedAt(formatDate(bundle.cv.updatedAt, locale))}</p>
+            </div>
+            <Link to={cvPath(locale)} className="btn btn-primary shrink-0 self-start md:self-auto">
+              <FileText size={18} strokeWidth={1.75} aria-hidden="true" />
+              {ui.more.cv}
+            </Link>
+          </div>
+        </ModuleSection>
+      )}
+
+      {on('contact') && (
+        <ModuleSection id="contact" title={ui.modules.contact} lead={ui.moduleLead.contact}>
+          <ContactBlock />
+        </ModuleSection>
+      )}
+    </div>
   );
 }

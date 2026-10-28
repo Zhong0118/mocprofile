@@ -1,0 +1,91 @@
+import type { Project } from '../types';
+
+// Facts come from the public repositories under github.com/Zhong0118 (non-fork, README and
+// repository metadata). `start` is the repository creation month, so every entry is marked
+// startKind "repository-created" and shown as such. `status` is only set where the README or
+// GitHub Releases states it. See docs/content-audit.md.
+export const projects: Project[] = [
+  {
+    id: 'agentguard-chain',
+    name: 'AgentGuard-Chain',
+    kind: 'research-prototype',
+    start: '2026-06',
+    startKind: 'repository-created',
+    techStack: ['Python', 'Streamlit'],
+    resources: { code: 'https://github.com/Zhong0118/AgentGuard-Chain' },
+    detail: true,
+    homepageOrder: 1,
+  },
+  {
+    id: 'evoteam',
+    name: 'EvoTeam',
+    kind: 'research-prototype',
+    start: '2026-09',
+    startKind: 'repository-created',
+    status: 'ongoing',
+    techStack: ['Python', 'Pydantic', 'openJiuwen Core', 'SQLite'],
+    resources: { code: 'https://github.com/Zhong0118/EvoTeam' },
+    detail: true,
+    homepageOrder: 2,
+  },
+  {
+    id: 'pinnote',
+    name: 'PinNote',
+    kind: 'tool',
+    start: '2026-05',
+    startKind: 'repository-created',
+    status: 'released',
+    techStack: ['Tauri 2', 'Rust', 'Svelte 5', 'TypeScript'],
+    resources: {
+      code: 'https://github.com/Zhong0118/PinNote',
+      release: 'https://github.com/Zhong0118/PinNote/releases',
+    },
+    homepageOrder: 3,
+  },
+  {
+    id: 'multi-tenant-crm-builder',
+    name: 'Multi-tenant CRM Builder',
+    kind: 'engineering',
+    start: '2026-08',
+    startKind: 'repository-created',
+    techStack: ['Next.js', 'NestJS', 'Prisma', 'PostgreSQL'],
+    resources: { code: 'https://github.com/Zhong0118/multi-tenant-CRM-builder' },
+  },
+  {
+    id: 'mars',
+    name: 'MARS',
+    kind: 'research-prototype',
+    start: '2026-05',
+    startKind: 'repository-created',
+    status: 'ongoing',
+    techStack: ['Python', 'FastAPI', 'Pydantic', 'SQLite'],
+    resources: { code: 'https://github.com/Zhong0118/MARS' },
+  },
+  {
+    id: 'aigc-detector',
+    name: 'aigc_detector',
+    kind: 'research-prototype',
+    start: '2026-05',
+    startKind: 'repository-created',
+    techStack: ['Python'],
+    resources: { code: 'https://github.com/Zhong0118/aigc_detector' },
+  },
+  {
+    id: 'paper-reader-skill',
+    name: 'Paper Reader Skill',
+    kind: 'tool',
+    start: '2026-09',
+    startKind: 'repository-created',
+    techStack: ['Python'],
+    resources: { code: 'https://github.com/Zhong0118/paper-reader-skill' },
+  },
+  {
+    id: 'richeditor',
+    name: 'RichEditor / BD-Note',
+    kind: 'competition',
+    start: '2024-06',
+    startKind: 'repository-created',
+    techStack: ['Vue 3', 'Tiptap', 'Flask', 'MongoDB'],
+    resources: { code: 'https://github.com/Zhong0118/RichEditor' },
+  },
+];
