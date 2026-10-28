@@ -1,14 +1,407 @@
 @import "tailwindcss";
 
+/* Dark variant follows the class set by the head script; without JS the media query below applies. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---------------------------------------------------------------- tokens */
+:root {
+  --background: #ffffff;
+  --foreground: #17202b;
+  --muted-foreground: #566170;
+  --link: #1d4ed8;
+  --separator: #e3e7ed;
+  --subtle-surface: #f5f7fa;
+  --focus-ring: #1d4ed8;
+  --button-bg: #1d4ed8;
+  --button-fg: #ffffff;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 140ms;
+  --dur-normal: 180ms;
+  --dur-route: 220ms;
+
+  --header-h: 60px;
+  --gutter: 20px;
+
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --font-serif-name: Georgia, "Times New Roman", "PingFang SC", "Noto Sans CJK SC",
+    "Microsoft YaHei", serif;
+
+  color-scheme: light;
+}
+
+html.dark {
+  --background: #111418;
+  --foreground: #edf0f4;
+  --muted-foreground: #a6afbb;
+  --link: #8ab4ff;
+  --separator: #2b313b;
+  --subtle-surface: #1a2029;
+  --focus-ring: #8ab4ff;
+  --button-bg: #8ab4ff;
+  --button-fg: #111418;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) {
+    --background: #111418;
+    --foreground: #edf0f4;
+    --muted-foreground: #a6afbb;
+    --link: #8ab4ff;
+    --separator: #2b313b;
+    --subtle-surface: #1a2029;
+    --focus-ring: #8ab4ff;
+    --button-bg: #8ab4ff;
+    --button-fg: #111418;
+    color-scheme: dark;
+  }
+}
+
+@media (min-width: 640px) {
+  :root { --gutter: 28px; }
+}
+@media (min-width: 1024px) {
+  :root { --gutter: 32px; --header-h: 64px; }
+}
+
+@theme inline {
+  --color-bg: var(--background);
+  --color-fg: var(--foreground);
+  --color-muted: var(--muted-foreground);
+  --color-link: var(--link);
+  --color-sep: var(--separator);
+  --color-subtle: var(--subtle-surface);
+  --color-focus: var(--focus-ring);
+  --font-sans: var(--font-sans);
+}
+
+/* Site styles live in the components layer so Tailwind utilities can still override them. */
+@layer components {
+/* ---------------------------------------------------------------- base */
 html {
-  scroll-behavior: smooth;
+  background: var(--background);
+  -webkit-text-size-adjust: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-ready body,
+  html.theme-ready .site-header {
+    transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  }
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+[id] { scroll-margin-top: calc(var(--header-h) + 20px); }
+
+a { color: var(--link); text-decoration: none; }
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Inline links in prose keep an underline so they never rely on colour alone. */
+.prose-link,
+.prose a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--link) 45%, transparent);
+  transition: text-decoration-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.prose-link:hover,
+.prose a:hover { text-decoration-color: currentColor; }
+
+/* Standalone links (titles, resource rows, nav): underline appears on hover/focus. */
+.plain-link {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+  transition: text-decoration-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.plain-link:hover,
+.plain-link:focus-visible { text-decoration-color: currentColor; }
+
+.break-url { overflow-wrap: anywhere; }
+
+/* JS-only controls are hidden until the head script marks the document. */
+.js-only { display: none !important; }
+html.js .js-only { display: revert !important; }
+html.js .js-only.inline-flex { display: inline-flex !important; }
+
+/* ---------------------------------------------------------------- layout */
+.shell {
+  box-sizing: content-box;
+  max-width: 1040px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.measure { max-width: 720px; }
+.detail-measure { max-width: 760px; }
+.cv-measure { max-width: 840px; }
+
+.page-top { padding-top: 28px; }
+@media (min-width: 1024px) { .page-top { padding-top: 40px; } }
+
+.section-gap { margin-top: 36px; }
+@media (min-width: 1024px) { .section-gap { margin-top: 48px; } }
+.intro-gap { margin-top: 40px; }
+
+/* ---------------------------------------------------------------- type scale */
+.t-name {
+  font-size: 28px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+html[lang="en"] .t-name { font-family: var(--font-serif-name); }
+.t-subname { font-size: 16px; line-height: 1.5; font-weight: 400; }
+.t-h2 { font-size: 20px; line-height: 1.4; font-weight: 600; }
+.t-entry { font-size: 17px; line-height: 1.5; font-weight: 600; }
+.t-body { font-size: 16px; line-height: 1.75; }
+.t-detail-body { font-size: 16px; line-height: 1.8; }
+.t-meta { font-size: 14px; line-height: 1.55; }
+.t-caption { font-size: 13px; line-height: 1.5; }
+.t-detail-h1 { font-size: 26px; line-height: 1.35; font-weight: 600; }
+
+@media (min-width: 1024px) {
+  .t-name { font-size: 36px; line-height: 1.2; }
+  .t-subname { font-size: 18px; }
+  .t-h2 { font-size: 22px; line-height: 1.35; }
+  .t-entry { font-size: 18px; line-height: 1.45; }
+  .t-detail-body { font-size: 17px; }
+  .t-detail-h1 { font-size: 32px; line-height: 1.3; }
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--background);
+  border-bottom: 1px solid var(--separator);
+}
+.header-bar { height: var(--header-h); }
+
+.nav-link {
+  color: var(--foreground);
+  font-size: 15px;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 6px;
+  text-decoration-color: transparent;
+  transition: color var(--dur-fast) var(--ease), text-decoration-color var(--dur-fast) var(--ease);
+}
+.nav-link:hover { color: var(--link); }
+.nav-link[aria-current] { color: var(--link); text-decoration-color: currentColor; }
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.icon-button:hover { background: var(--subtle-surface); color: var(--link); }
+.icon-button > .press { display: inline-flex; transition: transform var(--dur-fast) var(--ease); }
+.icon-button:active > .press { transform: scale(0.98); }
+
+/* Theme icon reflects the resolved theme through CSS so the DOM stays stable. */
+.theme-icon-dark { display: none; }
+html.dark .theme-icon-light { display: none; }
+html.dark .theme-icon-dark { display: inline; }
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) .theme-icon-light { display: none; }
+  html:not(.light):not(.dark) .theme-icon-dark { display: inline; }
+}
+
+/* Mobile menu: expands below the bar; hidden items are removed from tab order by visibility. */
+.menu-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows var(--dur-normal) var(--ease), visibility 0s linear var(--dur-normal);
+}
+.menu-panel[data-open="true"] {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows var(--dur-normal) var(--ease), visibility 0s;
+}
+.menu-panel > div { overflow: hidden; }
+html:not(.js) .menu-panel { grid-template-rows: 1fr; visibility: visible; }
+/* Without JS the navigation stays expanded, so the header must not stick over the page. */
+html:not(.js) .site-header { position: static; }
+@media (min-width: 1024px) { .menu-panel { display: none; } }
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: 50;
+  padding: 8px 12px;
+  background: var(--background);
+  color: var(--link);
+  border: 1px solid var(--separator);
+  border-radius: 6px;
+}
+.skip-link:focus { top: 8px; }
+
+/* ---------------------------------------------------------------- buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background: var(--button-bg);
+  color: var(--button-fg);
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 500;
+  border: 0;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--separator);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.btn-quiet:hover { border-color: var(--muted-foreground); color: var(--link); }
+.btn-quiet:active { transform: scale(0.98); }
+
+/* ---------------------------------------------------------------- entries */
+.resource-row { display: flex; flex-wrap: wrap; column-gap: 18px; row-gap: 4px; }
+.resource-row a { display: inline-flex; align-items: center; gap: 5px; padding-block: 6px; }
+@media (pointer: coarse) {
+  .resource-row { column-gap: 22px; }
+  .resource-row a { padding-block: 10px; }
+}
+
+
+details.disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--link);
+  padding-block: 6px;
+}
+details.disclosure > summary::-webkit-details-marker { display: none; }
+details.disclosure > summary .chevron { transition: transform var(--dur-normal) var(--ease); }
+details.disclosure[open] > summary .chevron { transform: rotate(90deg); }
+details.disclosure .when-open { display: none; }
+details.disclosure[open] .when-open { display: inline; }
+details.disclosure[open] .when-closed { display: none; }
+@supports (interpolate-size: allow-keywords) {
+  details.disclosure { interpolate-size: allow-keywords; }
+  details.disclosure::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition: block-size var(--dur-normal) var(--ease), content-visibility var(--dur-normal) allow-discrete;
+  }
+  details.disclosure[open]::details-content { block-size: auto; }
+}
+
+.code-block {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: var(--subtle-surface);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.figure-img { border-radius: 8px; background: var(--subtle-surface); object-fit: contain; }
+
+}
+
+/* ---------------------------------------------------------------- motion */
+@keyframes route-enter {
+  from { transform: translateY(6px); }
+  to { transform: none; }
+}
+.route-enter { animation: route-enter var(--dur-route) var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .route-enter { animation: none; }
+}
+
+/* ---------------------------------------------------------------- print */
+@media print {
+  @page { size: A4; margin: 17mm 16mm; }
+  :root, html.dark {
+    --background: #ffffff;
+    --foreground: #000000;
+    --muted-foreground: #3b4350;
+    --link: #000000;
+    --separator: #c9ced6;
+    --subtle-surface: #ffffff;
+    color-scheme: light;
+  }
+  html, body { background: #fff !important; color: #000 !important; }
+  body { font-size: 10.5pt; line-height: 1.45; }
+  .no-print, .site-header, .site-footer, .skip-link { display: none !important; }
+  .shell { max-width: none; padding: 0; }
+  .page-top { padding-top: 0; }
+  .cv-measure { max-width: none; }
+  .t-name { font-size: 20pt; }
+  .t-h2 { font-size: 13pt; break-after: avoid; page-break-after: avoid; }
+  .t-entry { font-size: 11pt; }
+  .t-meta, .t-caption { font-size: 9.5pt; }
+  .t-body { font-size: 10.5pt; line-height: 1.45; }
+  .cv-entry { break-inside: avoid; page-break-inside: avoid; }
+  .cv-section { margin-top: 14pt !important; }
+  a { color: #000 !important; text-decoration: none !important; }
+  .print-url::after { content: " — " attr(data-print-url); overflow-wrap: anywhere; }
+  * { animation: none !important; transition: none !important; }
 }

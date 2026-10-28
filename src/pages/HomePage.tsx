@@ -1,206 +1,238 @@
-import { useContent } from '@/hooks/useContent';
-import { PageLayout } from '@/components/layout/PageLayout';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { Section } from '@/components/layout/Section';
-import { SectionTitle } from '@/components/common/SectionTitle';
-import { Tag } from '@/components/common/Tag';
-import { PublicationCard } from '@/components/cards/PublicationCard';
-import { ProjectCard } from '@/components/cards/ProjectCard';
-import { RepositoryCard } from '@/components/cards/RepositoryCard';
-import { ExperienceCard } from '@/components/cards/ExperienceCard';
-import { AwardCard } from '@/components/cards/AwardCard';
-import { Mail, FileText } from 'lucide-react';
-import { GithubIcon } from '@/components/common/GithubIcon';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { FileText } from 'lucide-react';
+import { hasCv, selectHomepage } from '@/content/selectors';
+import { useSite } from '@/site/context';
+import { projectTarget, publicationTarget } from '@/site/links';
+import { cvPath } from '@/routing/paths';
+import { ResourceRow, resources } from '@/components/ResourceRow';
+import { PublicationEntry } from '@/components/PublicationEntry';
+import { ProjectEntry } from '@/components/ProjectEntry';
+import { ExperienceEntry } from '@/components/ExperienceEntry';
 
-export default function HomePage() {
-  const { content } = useContent();
+function HomeSection({
+  id,
+  title,
+  first,
+  more,
+  children,
+}: {
+  id: string;
+  title: string;
+  first: boolean;
+  more?: { label: string; href: string };
+  children: ReactNode;
+}) {
+  return (
+    <section id={id} aria-labelledby={`${id}-title`} className={first ? 'intro-gap' : 'section-gap'}>
+      <h2 id={`${id}-title`} className="t-h2">
+        {title}
+      </h2>
+      <div className="mt-5 space-y-7">{children}</div>
+      {more && (
+        <p className="t-meta mt-6">
+          <Link to={more.href} className="plain-link">
+            {more.label}
+          </Link>
+        </p>
+      )}
+    </section>
+  );
+}
 
-  if (!content) {
-    return (
-      <PageLayout>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-t-transparent" />
-        </div>
-      </PageLayout>
-    );
-  }
+function Intro() {
+  const { bundle, locale, t } = useSite();
+  const { person } = bundle;
+  const ui = t.ui;
+  const avatar = person.avatar;
+  const cv = hasCv(bundle);
 
-  const { profile, publications, projects, repositories, experience, awards, cv, common } = content;
+  const name = (
+    <div className="min-w-0">
+      <h1 id="about-title" className="t-name">
+        {person.displayName}
+      </h1>
+      {(person.englishName || person.handle) && (
+        <p className="t-subname text-muted">
+          {person.englishName ?? (
+            <>
+              GitHub <span lang="en">@{person.handle}</span>
+            </>
+          )}
+        </p>
+      )}
+    </div>
+  );
 
   return (
-    <PageLayout>
-      <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
-        <Sidebar profile={profile} common={common} />
+    <section id="about" aria-labelledby="about-title" className="page-top">
+      <div className="flex items-start gap-12">
+        <div className="min-w-0 flex-1">
+          {avatar ? (
+            <div className="flex items-center gap-4 sm:block">
+              <img
+                src={avatar.src}
+                width={72}
+                height={72}
+                alt=""
+                className="figure-img size-[72px] shrink-0 object-cover sm:hidden"
+                fetchPriority="high"
+              />
+              {name}
+            </div>
+          ) : (
+            name
+          )}
+          {t.person.identity?.map((line) => (
+            <p key={line} className="t-body mt-1 text-muted">
+              {line}
+            </p>
+          ))}
 
-        <main className="space-y-16">
-          {/* Hero */}
-          <Section id="hero">
-            <div className="rounded-2xl border border-gray-200/60 bg-white p-8 shadow-sm dark:border-gray-700/60 dark:bg-gray-900">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {common.heroGreeting}{' '}
-                <span className="bg-gradient-to-r from-sky-600 to-cyan-500 bg-clip-text text-transparent">
-                  {profile.name}
-                </span>
-              </h2>
-              <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
-                {common.heroDescription}
+          <div className="measure mt-5 space-y-3">
+            {t.person.intro.map((p, i) => (
+              <p key={i} className="t-body">
+                {p}
               </p>
-            </div>
-          </Section>
+            ))}
+            {bundle.focus.length > 0 && (
+              <ul className="space-y-2">
+                {bundle.focus.map((f) => {
+                  const text = t.person.focus[f.id];
+                  const target = f.projectId
+                    ? projectTarget(bundle, locale, f.projectId)
+                    : f.publicationId
+                      ? publicationTarget(bundle, locale, f.publicationId)
+                      : undefined;
+                  const evidence = f.projectId
+                    ? bundle.projects.find((p) => p.id === f.projectId)?.name
+                    : bundle.publications.find((p) => p.id === f.publicationId)?.originalTitle;
+                  return (
+                    <li key={f.id} className="t-body relative pl-4 before:absolute before:left-0 before:text-muted before:content-['–']">
+                      <span className="font-semibold">{text.label}</span>
+                      {ui.colon}
+                      {text.text}
+                      {target && evidence && (
+                        <>
+                          {' '}
+                          {target.internal ? (
+                            <Link to={target.href} className="prose-link" lang="en">
+                              {evidence}
+                            </Link>
+                          ) : (
+                            <a href={target.href} className="prose-link" lang="en">
+                              {evidence}
+                            </a>
+                          )}
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
-          {/* About */}
-          <Section id="about">
-            <SectionTitle title={common.aboutTitle} />
-            <div className="space-y-3">
-              {common.aboutContent.map((text, i) => (
-                <p
-                  key={i}
-                  className="text-sm leading-relaxed text-gray-600 dark:text-gray-400"
-                >
-                  {text}
-                </p>
-              ))}
-            </div>
-          </Section>
-
-          {/* Research Interests */}
-          <Section id="research">
-            <SectionTitle title={common.researchInterestsTitle} />
-            <div className="flex flex-wrap gap-2">
-              {profile.researchInterests.map((interest) => (
-                <Tag key={interest}>{interest}</Tag>
-              ))}
-            </div>
-          </Section>
-
-          {/* Publications */}
-          <Section id="publications">
-            <SectionTitle
-              title={common.publicationsTitle}
-              subtitle={common.publicationsSubtitle}
+          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2">
+            {cv && (
+              <Link to={cvPath(locale)} className="btn-primary">
+                <FileText size={16} strokeWidth={1.75} aria-hidden="true" />
+                {ui.resources.cv}
+              </Link>
+            )}
+            <ResourceRow
+              items={resources([
+                [person.email ?? '', person.email ? `mailto:${person.email}` : undefined],
+                [ui.resources.github, person.links.github],
+                [ui.resources.blog, person.links.blog],
+                [ui.resources.scholar, person.links.scholar],
+                [ui.resources.orcid, person.links.orcid],
+              ])}
             />
-            <div className="space-y-4">
-              {publications.map((pub) => (
-                <PublicationCard key={pub.id} publication={pub} common={common} />
-              ))}
-            </div>
-          </Section>
-
-          {/* Projects */}
-          <Section id="projects">
-            <SectionTitle
-              title={common.projectsTitle}
-              subtitle={common.projectsSubtitle}
-            />
-            <div className="space-y-4">
-              {projects.map((proj) => (
-                <ProjectCard key={proj.id} project={proj} common={common} />
-              ))}
-            </div>
-          </Section>
-
-          {/* GitHub */}
-          <Section id="github">
-            <SectionTitle
-              title={common.githubTitle}
-              subtitle={common.githubSubtitle}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              {repositories.slice(0, 6).map((repo) => (
-                <RepositoryCard key={repo.name} repository={repo} common={common} />
-              ))}
-            </div>
-          </Section>
-
-          {/* Experience */}
-          <Section id="experience">
-            <SectionTitle
-              title={common.experienceTitle}
-              subtitle={common.experienceSubtitle}
-            />
-            <div className="space-y-6">
-              {experience.map((exp, i) => (
-                <ExperienceCard key={i} experience={exp} />
-              ))}
-            </div>
-          </Section>
-
-          {/* Awards */}
-          <Section id="awards">
-            <SectionTitle
-              title={common.awardsTitle}
-              subtitle={common.awardsSubtitle}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              {awards.map((award, i) => (
-                <AwardCard key={i} award={award} />
-              ))}
-            </div>
-          </Section>
-
-          {/* CV */}
-          <Section id="cv">
-            <SectionTitle
-              title={common.cvTitle}
-              subtitle={common.cvSubtitle}
-            />
-            <div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm dark:border-gray-700/60 dark:bg-gray-900">
-              <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-                {cv.summary}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {cv.skills.map((skill) => (
-                  <Tag key={skill}>{skill}</Tag>
-                ))}
-              </div>
-              <div className="mt-4">
-                <a
-                  href={cv.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600"
-                >
-                  <FileText className="h-4 w-4" />
-                  {common.downloadCV}
-                </a>
-              </div>
-            </div>
-          </Section>
-
-          {/* Contact */}
-          <Section id="contact">
-            <SectionTitle
-              title={common.contactTitle}
-              subtitle={common.contactSubtitle}
-            />
-            <div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm dark:border-gray-700/60 dark:bg-gray-900">
-              <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-                {common.contactDescription}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <a
-                  href={`mailto:${profile.email}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600"
-                >
-                  <Mail className="h-4 w-4" />
-                  {profile.email}
-                </a>
-                {profile.github && (
-                  <a
-                    href={profile.github}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                  >
-                    <GithubIcon className="h-4 w-4" />
-                    GitHub
-                  </a>
-                )}
-              </div>
-            </div>
-          </Section>
-        </main>
+          </div>
+        </div>
+        {avatar && (
+          <img
+            src={avatar.src}
+            width={avatar.width}
+            height={avatar.height}
+            alt=""
+            fetchPriority="high"
+            className="figure-img hidden size-32 shrink-0 object-cover sm:block lg:size-44"
+          />
+        )}
       </div>
-    </PageLayout>
+    </section>
+  );
+}
+
+export default function HomePage() {
+  const { bundle, locale, t } = useSite();
+  const ui = t.ui;
+  const home = selectHomepage(bundle);
+  const cv = cvPath(locale);
+  let index = 0;
+  const isFirst = () => index++ === 0;
+
+  return (
+    <div className="shell">
+      <Intro />
+      {home.publications.length > 0 && (
+        <HomeSection
+          id="publications"
+          title={ui.sections.publications}
+          first={isFirst()}
+          more={home.more.publications ? { label: ui.fullListInCv.publications, href: `${cv}#publications` } : undefined}
+        >
+          <ol className="space-y-7">
+            {home.publications.map((p) => (
+              <li key={p.id}>
+                <PublicationEntry pub={p} />
+              </li>
+            ))}
+          </ol>
+        </HomeSection>
+      )}
+      {home.projects.length > 0 && (
+        <HomeSection
+          id="projects"
+          title={ui.sections.projects}
+          first={isFirst()}
+          more={home.more.projects ? { label: ui.fullListInCv.projects, href: `${cv}#projects` } : undefined}
+        >
+          <ul className="space-y-7">
+            {home.projects.map((p) => (
+              <li key={p.id}>
+                <ProjectEntry project={p} />
+              </li>
+            ))}
+          </ul>
+        </HomeSection>
+      )}
+      {home.experience.length > 0 && (
+        <HomeSection
+          id="experience"
+          title={ui.sections.experience}
+          first={isFirst()}
+          more={
+            home.more.experience
+              ? {
+                  label: ui.fullListInCv.experience,
+                  // The CV splits education from research/employment; link to the section that exists.
+                  href: `${cv}#${bundle.experience.some((e) => e.kind !== 'education') ? 'experience' : 'education'}`,
+                }
+              : undefined
+          }
+        >
+          <ul className="space-y-7">
+            {home.experience.map((e) => (
+              <li key={e.id}>
+                <ExperienceEntry item={e} />
+              </li>
+            ))}
+          </ul>
+        </HomeSection>
+      )}
+    </div>
   );
 }

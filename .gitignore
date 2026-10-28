@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# build-time SSR bundle (never deployed)
+dist-server
