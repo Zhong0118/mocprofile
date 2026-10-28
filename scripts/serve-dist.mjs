@@ -1,7 +1,10 @@
 // Local static server that mirrors the Vercel rules in vercel.json closely enough for checks:
 // trailingSlash: true (308 for extension-less paths), directory index.html, and dist/404.html
 // served with a real HTTP 404 for anything that does not exist. No SPA fallback.
+// Like Vercel it gzips text responses and marks hashed /assets/ as immutable, so local Lighthouse runs
+// are not dominated by transfer overhead the production host does not have.
 import http from 'node:http';
+import zlib from 'node:zlib';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,9 +26,20 @@ const types = {
   '.json': 'application/json; charset=utf-8',
 };
 
-function send(res, status, file) {
-  res.writeHead(status, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream' });
-  fs.createReadStream(file).pipe(res);
+const compressible = /^(text\/|application\/(json|xml)|image\/svg)/;
+
+function send(res, status, file, req) {
+  const type = types[path.extname(file)] ?? 'application/octet-stream';
+  const headers = { 'Content-Type': type };
+  if (file.startsWith(path.join(dist, 'assets') + path.sep)) headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+  const gzip = compressible.test(type) && /\bgzip\b/.test(req?.headers['accept-encoding'] ?? '');
+  if (gzip) {
+    headers['Content-Encoding'] = 'gzip';
+    headers['Vary'] = 'Accept-Encoding';
+  }
+  res.writeHead(status, headers);
+  const stream = fs.createReadStream(file);
+  (gzip ? stream.pipe(zlib.createGzip()) : stream).pipe(res);
 }
 
 http
@@ -35,17 +49,17 @@ http
     try {
       pathname = decodeURIComponent(url.pathname);
     } catch {
-      return send(res, 400, path.join(dist, '404.html'));
+      return send(res, 400, path.join(dist, '404.html'), req);
     }
     const file = path.normalize(path.join(dist, pathname));
-    if (!file.startsWith(dist)) return send(res, 404, path.join(dist, '404.html'));
+    if (!file.startsWith(dist)) return send(res, 404, path.join(dist, '404.html'), req);
 
     if (!pathname.endsWith('/') && !path.extname(pathname)) {
       res.writeHead(308, { Location: `${url.pathname}/${url.search}` });
       return res.end();
     }
     const target = pathname.endsWith('/') ? path.join(file, 'index.html') : file;
-    if (fs.existsSync(target) && fs.statSync(target).isFile()) return send(res, 200, target);
-    return send(res, 404, path.join(dist, '404.html'));
+    if (fs.existsSync(target) && fs.statSync(target).isFile()) return send(res, 200, target, req);
+    return send(res, 404, path.join(dist, '404.html'), req);
   })
   .listen(port, () => console.log(`Serving dist/ on http://localhost:${port}`));

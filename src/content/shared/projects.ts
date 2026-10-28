@@ -1,14 +1,16 @@
 import type { Project } from '../types';
 
 // Facts come from the public repositories under github.com/Zhong0118 (non-fork, README and
-// repository metadata). `start` is the repository creation month. `status` is only set where the
-// README or GitHub Releases states it. See docs/content-audit.md.
+// repository metadata). `start` is the repository creation month, so every entry is marked
+// startKind "repository-created" and shown as such. `status` is only set where the README or
+// GitHub Releases states it. See docs/content-audit.md.
 export const projects: Project[] = [
   {
     id: 'agentguard-chain',
     name: 'AgentGuard-Chain',
     kind: 'research-prototype',
     start: '2026-06',
+    startKind: 'repository-created',
     techStack: ['Python', 'Streamlit'],
     resources: { code: 'https://github.com/Zhong0118/AgentGuard-Chain' },
     detail: true,
@@ -19,6 +21,7 @@ export const projects: Project[] = [
     name: 'EvoTeam',
     kind: 'research-prototype',
     start: '2026-09',
+    startKind: 'repository-created',
     status: 'ongoing',
     techStack: ['Python', 'Pydantic', 'openJiuwen Core', 'SQLite'],
     resources: { code: 'https://github.com/Zhong0118/EvoTeam' },
@@ -30,6 +33,7 @@ export const projects: Project[] = [
     name: 'PinNote',
     kind: 'tool',
     start: '2026-05',
+    startKind: 'repository-created',
     status: 'released',
     techStack: ['Tauri 2', 'Rust', 'Svelte 5', 'TypeScript'],
     resources: {
@@ -43,6 +47,7 @@ export const projects: Project[] = [
     name: 'Multi-tenant CRM Builder',
     kind: 'engineering',
     start: '2026-08',
+    startKind: 'repository-created',
     techStack: ['Next.js', 'NestJS', 'Prisma', 'PostgreSQL'],
     resources: { code: 'https://github.com/Zhong0118/multi-tenant-CRM-builder' },
   },
@@ -51,6 +56,7 @@ export const projects: Project[] = [
     name: 'MARS',
     kind: 'research-prototype',
     start: '2026-05',
+    startKind: 'repository-created',
     status: 'ongoing',
     techStack: ['Python', 'FastAPI', 'Pydantic', 'SQLite'],
     resources: { code: 'https://github.com/Zhong0118/MARS' },
@@ -60,6 +66,7 @@ export const projects: Project[] = [
     name: 'aigc_detector',
     kind: 'research-prototype',
     start: '2026-05',
+    startKind: 'repository-created',
     techStack: ['Python'],
     resources: { code: 'https://github.com/Zhong0118/aigc_detector' },
   },
@@ -68,6 +75,8 @@ export const projects: Project[] = [
     name: 'Paper Reader Skill',
     kind: 'tool',
     start: '2026-09',
+    startKind: 'repository-created',
+    techStack: ['Python'],
     resources: { code: 'https://github.com/Zhong0118/paper-reader-skill' },
   },
   {
@@ -75,6 +84,7 @@ export const projects: Project[] = [
     name: 'RichEditor / BD-Note',
     kind: 'competition',
     start: '2024-06',
+    startKind: 'repository-created',
     techStack: ['Vue 3', 'Tiptap', 'Flask', 'MongoDB'],
     resources: { code: 'https://github.com/Zhong0118/RichEditor' },
   },

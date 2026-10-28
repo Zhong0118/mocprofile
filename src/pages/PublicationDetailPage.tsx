@@ -1,12 +1,12 @@
 import { useParams } from 'react-router-dom';
 import { findPublicationDetail } from '@/content/selectors';
 import { useSite } from '@/site/context';
-import { homePath } from '@/routing/paths';
+import { publicationsPath } from '@/routing/paths';
 import { AuthorList, publicationFacts, publicationResources } from '@/components/PublicationEntry';
 import { ResourceRow } from '@/components/ResourceRow';
 import { MetaLine } from '@/components/MetaLine';
 import { BibtexBlock } from '@/components/BibtexBlock';
-import { BackLink, DetailSections } from './DetailParts';
+import { BackLink, DetailSections } from './PageParts';
 import NotFoundPage from './NotFoundPage';
 
 export default function PublicationDetailPage() {
@@ -26,10 +26,10 @@ function PublicationDetail({ id }: { id: string }) {
   const abstractInOtherLanguage = pub.abstract && pub.abstract.lang !== locale;
 
   return (
-    <article className="shell">
-      <div className="page-top detail-measure">
-        <BackLink to={`${homePath(locale)}#publications`} label={ui.detail.backToPublications} />
-        <h1 className="t-detail-h1 mt-3" lang={toLang(pub.titleLang)}>
+    <article className="page-wrap">
+      <div className="page-top measure">
+        <BackLink to={publicationsPath(locale)} label={ui.detail.backToPublications} />
+        <h1 className="t-h1 mt-3" lang={toLang(pub.titleLang)}>
           {pub.originalTitle}
         </h1>
         {text.translatedTitle && <p className="t-meta mt-1 text-muted">{text.translatedTitle}</p>}
@@ -49,7 +49,7 @@ function PublicationDetail({ id }: { id: string }) {
                 {ui.publication.originalLanguage(ui.languageName[pub.abstract.lang])}
               </p>
             )}
-            <p className="t-detail-body break-url mt-3" lang={toLang(pub.abstract.lang)}>
+            <p className="t-body break-url mt-3" lang={toLang(pub.abstract.lang)}>
               {pub.abstract.text}
             </p>
           </section>

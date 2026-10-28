@@ -1,37 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
-import { navVisibility } from '@/content/selectors';
+import { m } from 'motion/react';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
+import { isModuleEnabled } from '@/content/selectors';
+import type { ModuleId } from '@/content/types';
 import { useSite } from '@/site/context';
-import { cvPath, homePath, stripLocale, switchLocalePath } from '@/routing/paths';
+import {
+  aboutPath,
+  cvPath,
+  homePath,
+  projectsPath,
+  publicationsPath,
+  repositoriesPath,
+  stripLocale,
+  switchLocalePath,
+} from '@/routing/paths';
+import { indicatorTransition } from '@/motion';
 import { ThemeToggle } from './ThemeToggle';
 
-const SECTION_IDS = ['about', 'publications', 'projects', 'experience'] as const;
-
-/** Tracks which homepage section the reader is in (for the active nav item and language switch). */
-function useActiveSection(enabled: boolean): string | undefined {
+/** Id of the section the reader is in, from elements marked data-section. Used by the language switch. */
+function useActiveSection(pathname: string): string | undefined {
   const [active, setActive] = useState<string | undefined>(undefined);
   useEffect(() => {
-    if (!enabled) {
-      setActive(undefined);
-      return;
-    }
     let frame = 0;
     const update = () => {
       frame = 0;
       const offset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) + 24;
+      const sections = [...document.querySelectorAll<HTMLElement>('main [data-section]')];
       let current: string | undefined;
-      for (const id of SECTION_IDS) {
-        const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top - offset <= 0) current = id;
-      }
-      // At the very bottom a short last section can never reach the top; treat it as current.
+      for (const el of sections) if (el.getBoundingClientRect().top - offset <= 0) current = el.id;
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-      if (atBottom) {
-        const last = [...SECTION_IDS].reverse().find((id) => document.getElementById(id));
-        if (last) current = last;
-      }
-      setActive(current ?? 'about');
+      if (atBottom && sections.length && window.scrollY > 0) current = sections[sections.length - 1].id;
+      setActive(current);
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -44,28 +44,33 @@ function useActiveSection(enabled: boolean): string | undefined {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
-  }, [enabled]);
+  }, [pathname]);
   return active;
+}
+
+interface NavItem {
+  key: ModuleId;
+  label: string;
+  to: string;
+  /** Path prefix (without locale) that marks this item as current. */
+  match: string;
 }
 
 export function Header() {
   const { bundle, locale, t } = useSite();
   const ui = t.ui;
-  const { pathname } = useLocation();
-  const isHome = stripLocale(pathname) === '/';
-  const isCv = stripLocale(pathname).startsWith('/cv');
-  const visible = navVisibility(bundle);
-  const active = useActiveSection(isHome);
+  const { pathname, search, hash } = useLocation();
+  const rest = stripLocale(pathname);
+  const active = useActiveSection(pathname);
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
 
-  const home = homePath(locale);
   const other = locale === 'zh' ? 'en' : 'zh';
-  const sectionHash = isHome && active && active !== 'about' ? `#${active}` : '';
-  const languageHref = switchLocalePath(pathname, other) + sectionHash;
+  // Same entity, same filters, same place on the page.
+  const anchor = active ? `#${active}` : hash;
+  const languageHref = switchLocalePath(pathname, other, search, anchor);
 
-  // Close on route change, Escape and outside clicks. Not a modal: no focus trap.
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
@@ -86,61 +91,70 @@ export function Header() {
     };
   }, [open]);
 
-  const items = [
-    { key: 'about', label: ui.nav.about, to: `${home}#about`, current: isHome && active === 'about' },
-    visible.publications && {
-      key: 'publications',
-      label: ui.nav.publications,
-      to: `${home}#publications`,
-      current: isHome && active === 'publications',
-    },
-    visible.projects && {
-      key: 'projects',
-      label: ui.nav.projects,
-      to: `${home}#projects`,
-      current: isHome && active === 'projects',
-    },
-    visible.cv && { key: 'cv', label: ui.nav.cv, to: cvPath(locale), current: isCv, page: true },
-  ].filter(Boolean) as { key: string; label: string; to: string; current: boolean; page?: boolean }[];
+  const items = (
+    [
+      { key: 'about', label: ui.nav.about, to: aboutPath(locale), match: '/about/' },
+      { key: 'projects', label: ui.nav.projects, to: projectsPath(locale), match: '/projects/' },
+      { key: 'publications', label: ui.nav.publications, to: publicationsPath(locale), match: '/publications/' },
+      { key: 'repositories', label: ui.nav.repositories, to: repositoriesPath(locale), match: '/repositories/' },
+      { key: 'cv', label: ui.nav.cv, to: cvPath(locale), match: '/cv/' },
+    ] satisfies NavItem[]
+  ).filter((i) => isModuleEnabled(bundle, i.key));
+  const currentKey = items.find((i) => rest.startsWith(i.match) || (i.key === 'publications' && rest.startsWith('/papers/')))?.key;
 
-  const renderItems = (onSelect?: () => void, mobile = false) => (
-    <>
-      {items.map((item) => (
+  const renderItems = (mobile: boolean) =>
+    items.map((item) => {
+      const current = item.key === currentKey;
+      return (
         <li key={item.key}>
           <Link
             to={item.to}
-            className={mobile ? 'nav-link block py-2.5' : 'nav-link'}
-            aria-current={item.current ? (item.page ? 'page' : 'true') : undefined}
-            onClick={onSelect}
+            className="nav-item"
+            aria-current={current ? (rest === item.match ? 'page' : 'true') : undefined}
+            onClick={mobile ? () => setOpen(false) : undefined}
           >
-            {item.label}
+            {current && (
+              <m.span
+                layoutId={mobile ? 'nav-indicator-mobile' : 'nav-indicator'}
+                className="nav-indicator"
+                transition={indicatorTransition}
+              />
+            )}
+            <span className="nav-label">{item.label}</span>
           </Link>
         </li>
-      ))}
-      {visible.blog && (
-        <li>
-          <a href={bundle.person.links.blog} className={mobile ? 'nav-link block py-2.5' : 'nav-link'} onClick={onSelect}>
-            {ui.nav.blog}
-          </a>
-        </li>
-      )}
-    </>
-  );
+      );
+    });
+
+  const blog = bundle.person.links.blog;
 
   return (
     <header ref={headerRef} className="site-header">
-      <div className="shell header-bar flex items-center justify-between gap-3">
-        <Link to={home} className="text-[17px] font-semibold leading-none text-fg">
+      <div className="page-wrap header-bar flex items-center justify-between gap-3">
+        <Link to={homePath(locale)} className="brand">
           {bundle.person.displayName}
         </Link>
-        <div className="flex items-center gap-2 lg:gap-6">
+        <div className="flex items-center gap-1 lg:gap-4">
           <nav aria-label={ui.nav.label} className="hidden lg:block">
-            <ul className="flex items-center gap-6">{renderItems()}</ul>
+            <ul className="flex items-center gap-1">
+              {renderItems(false)}
+              {blog && (
+                <li>
+                  <a href={blog} className="nav-item">
+                    <span className="nav-label">
+                      {ui.nav.blog}
+                      <ArrowUpRight size={15} strokeWidth={1.85} aria-hidden="true" />
+                      <span className="sr-only">{ui.nav.external}</span>
+                    </span>
+                  </a>
+                </li>
+              )}
+            </ul>
           </nav>
-          <div className="flex items-center">
+          <div className="flex items-center" role="group" aria-label={ui.nav.tools}>
             <Link
               to={languageHref}
-              className="nav-link inline-flex h-11 min-w-11 items-center justify-center px-2 text-[15px]"
+              className="icon-button lang-link"
               hrefLang={other === 'zh' ? 'zh-CN' : 'en'}
               lang={other === 'zh' ? 'zh-CN' : 'en'}
               aria-label={ui.languageSwitch.label}
@@ -149,23 +163,21 @@ export function Header() {
             </Link>
             <ThemeToggle />
             <span className="flex lg:hidden">
-            <button
-              ref={buttonRef}
-              type="button"
-              className="icon-button js-only inline-flex"
-              aria-expanded={open}
-              aria-controls="mobile-nav"
-              aria-label={open ? ui.nav.menuClose : ui.nav.menuOpen}
-              onClick={() => setOpen((v) => !v)}
-            >
-              <span className="press">
+              <button
+                ref={buttonRef}
+                type="button"
+                className="icon-button js-only inline-flex"
+                aria-expanded={open}
+                aria-controls="mobile-nav"
+                aria-label={open ? ui.nav.menuClose : ui.nav.menuOpen}
+                onClick={() => setOpen((v) => !v)}
+              >
                 {open ? (
-                  <X size={20} strokeWidth={1.75} aria-hidden="true" />
+                  <X size={20} strokeWidth={1.85} aria-hidden="true" />
                 ) : (
-                  <Menu size={20} strokeWidth={1.75} aria-hidden="true" />
+                  <Menu size={20} strokeWidth={1.85} aria-hidden="true" />
                 )}
-              </span>
-            </button>
+              </button>
             </span>
           </div>
         </div>
@@ -173,7 +185,20 @@ export function Header() {
       <div id="mobile-nav" className="menu-panel" data-open={open}>
         <div>
           <nav aria-label={ui.nav.label}>
-            <ul className="shell pb-3 pt-1">{renderItems(() => setOpen(false), true)}</ul>
+            <ul className="page-wrap grid gap-1 pb-4 pt-1">
+              {renderItems(true)}
+              {blog && (
+                <li>
+                  <a href={blog} className="nav-item" onClick={() => setOpen(false)}>
+                    <span className="nav-label">
+                      {ui.nav.blog}
+                      <ArrowUpRight size={16} strokeWidth={1.85} aria-hidden="true" />
+                      <span className="sr-only">{ui.nav.external}</span>
+                    </span>
+                  </a>
+                </li>
+              )}
+            </ul>
           </nav>
         </div>
       </div>

@@ -62,7 +62,7 @@ export function PublicationEntry({ pub, showFigure = true }: { pub: Publication;
   return (
     <article id={entryAnchor('publication', pub.id)} className="cv-entry flex gap-6">
       <div className="min-w-0 flex-1">
-        <h3 className="t-entry" lang={lang}>
+        <h3 className="t-h3" lang={lang}>
           {titleNode}
         </h3>
         {text?.translatedTitle && <p className="t-meta text-muted">{text.translatedTitle}</p>}

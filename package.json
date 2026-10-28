@@ -9,7 +9,8 @@
     "build": "tsc -p . && vite build && vite build --ssr src/entry-server.tsx --outDir dist-server && node scripts/prerender.mjs && node scripts/check-dist.mjs",
     "preview": "node scripts/serve-dist.mjs",
     "test": "vitest run",
-    "check:dist": "node scripts/check-dist.mjs"
+    "check:dist": "node scripts/check-dist.mjs",
+    "snapshot:blog": "node scripts/fetch-blog.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
@@ -25,6 +26,7 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
+    "motion": "^14.7.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",

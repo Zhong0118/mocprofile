@@ -1,4 +1,4 @@
-import type { FocusItem, Person } from '../types';
+import type { Person, ResearchDirection } from '../types';
 
 // Sources: GitHub public profile of Zhong0118 (name "mocX", blog field) — see docs/content-audit.md.
 export const person: Person = {
@@ -11,10 +11,10 @@ export const person: Person = {
   },
 };
 
-// Research focus lines in the introduction. Each points at public work that shows the interest;
-// wording in the locales uses "关注 / interested in", not claims of finished research.
-export const focus: FocusItem[] = [
-  { id: 'agent-security', projectId: 'agentguard-chain' },
-  { id: 'multi-agent', projectId: 'evoteam' },
-  { id: 'aigc-attribution', projectId: 'aigc-detector' },
+// Research directions. Each one points at public work that shows the interest; locale texts use
+// "关注 / looks at", not claims of finished research.
+export const directions: ResearchDirection[] = [
+  { id: 'agent-security', projectIds: ['agentguard-chain'] },
+  { id: 'multi-agent', projectIds: ['evoteam', 'mars'] },
+  { id: 'aigc-attribution', projectIds: ['aigc-detector'] },
 ];

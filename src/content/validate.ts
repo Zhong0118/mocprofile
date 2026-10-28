@@ -1,6 +1,6 @@
 // Build-time content checks for the risks that actually hurt this site: template residue,
 // broken references, fake links, missing translations and impossible status/date combinations.
-import { LOCALES, type ContentBundle, type ImageAsset, type PartialDate } from './types';
+import { LOCALES, MODULE_IDS, type ContentBundle, type ImageAsset, type PartialDate } from './types';
 import { buildRouteManifest } from '@/routing/manifest';
 
 /** Strings that only ever appear in template or demo material. */
@@ -35,33 +35,47 @@ const PLATFORM_HOMEPAGES = [
   'https://www.linkedin.com/',
 ];
 
+/** Metric fields that must never be stored for repositories (no fake or volatile popularity). */
+const FORBIDDEN_REPO_KEYS = ['stars', 'stargazers', 'stargazers_count', 'forks', 'forks_count', 'watchers', 'views'];
+/** Skills that need explicit evidence; they tend to be added to profiles by habit. */
+const SKILLS_NEEDING_EVIDENCE = ['PyTorch', 'TensorFlow', 'Docker', 'LaTeX', 'Kubernetes'];
+
 export interface ValidateOptions {
   /** Returns true when a public/ path exists. Omit to skip file checks (e.g. in the browser). */
   assetExists?: (publicPath: string) => boolean;
-  /** Skip the template-marker scan (used for fixtures, which are deliberately fake). */
-  allowTemplateMarkers?: boolean;
 }
 
+/**
+ * Template residue check, kept separate from the structural checks below: fixtures and intake
+ * templates are deliberately fake and only run validateContent; public content runs both.
+ */
+export function findTemplateResidue(bundle: ContentBundle): string[] {
+  const serialized = JSON.stringify(bundle, (_k, v) => (typeof v === 'function' ? String(v) : v));
+  return TEMPLATE_MARKERS.filter((m) => serialized.includes(m)).map(
+    (m) => `template marker "${m}" found in public content`,
+  );
+}
+
+/** Structural and reference checks for any bundle (public content, fixtures, intake samples). */
 export function validateContent(bundle: ContentBundle, options: ValidateOptions = {}): string[] {
   const errors: string[] = [];
   const err = (msg: string) => errors.push(msg);
 
-  // --- template residue -----------------------------------------------------------------
-  if (!options.allowTemplateMarkers) {
-    const serialized = JSON.stringify(bundle, (_k, v) => (typeof v === 'function' ? String(v) : v));
-    for (const marker of TEMPLATE_MARKERS) {
-      if (serialized.includes(marker)) err(`template marker "${marker}" found in public content`);
-    }
+  // --- modules ---------------------------------------------------------------------------
+  for (const id of MODULE_IDS) {
+    if (!bundle.site.modules?.[id]) err(`site.modules: missing config for module "${id}"`);
   }
 
   // --- IDs -------------------------------------------------------------------------------
   const collections = {
     publications: bundle.publications,
     projects: bundle.projects,
+    repositories: bundle.repositories,
     experience: bundle.experience,
     awards: bundle.awards,
-    skills: bundle.skills,
-    focus: bundle.focus,
+    skillGroups: bundle.skills,
+    skills: bundle.skills.flatMap((g) => g.skills),
+    directions: bundle.directions,
   } as const;
   for (const [name, items] of Object.entries(collections)) {
     const seen = new Set<string>();
@@ -114,6 +128,10 @@ export function validateContent(bundle: ContentBundle, options: ValidateOptions 
     for (const [k, v] of Object.entries(p.resources)) checkUrl(`project ${p.id}.${k}`, v);
     checkImage(`project ${p.id}.image`, p.image);
   }
+  for (const r of bundle.repositories) checkUrl(`repository ${r.id}.url`, r.url);
+  for (const r of bundle.repositories) checkUrl(`repository ${r.id}.release`, r.release);
+  for (const a of bundle.awards) checkUrl(`award ${a.id}.evidence`, a.evidence);
+  for (const item of bundle.blog?.items ?? []) checkUrl(`blog item "${item.title}"`, item.url);
   for (const [lang, pdf] of Object.entries(bundle.cv.pdf ?? {})) {
     if (!pdf) continue;
     if (!pdf.href.endsWith('.pdf')) err(`cv.pdf.${lang}: must point to a .pdf file`);
@@ -158,8 +176,29 @@ export function validateContent(bundle: ContentBundle, options: ValidateOptions 
     if (p.end && p.end < p.start) err(`project ${p.id}: end before start`);
     if (p.status === 'ongoing' && p.end) err(`project ${p.id}: ongoing project has an end date`);
     if ((p.techStack?.length ?? 0) > 4) err(`project ${p.id}: list at most four technologies`);
+    if (p.startKind !== 'repository-created' && p.startKind !== 'actual') {
+      err(`project ${p.id}: startKind must say what the start date means`);
+    }
     if (p.detail && LOCALES.some((l) => !bundle.locales[l].projects[p.id]?.sections?.length)) {
       err(`project ${p.id}: detail page enabled without detail sections in every locale`);
+    }
+    for (const l of LOCALES) {
+      const sections = bundle.locales[l].projects[p.id]?.sections ?? [];
+      const ids = sections.map((x) => x.id);
+      if (new Set(ids).size !== ids.length) err(`project ${p.id} (${l}): duplicate section ids`);
+      for (const sec of sections) {
+        if (!/^[a-z0-9][a-z0-9-]*$/.test(sec.id)) err(`project ${p.id} (${l}): invalid section id "${sec.id}"`);
+        // Numbers copied from a README (cases, tests, versions) must say where they come from.
+        const text = [...(sec.paragraphs ?? []), ...(sec.list ?? [])].join(' ');
+        if (/\d{2,}/.test(text) && !sec.source) {
+          err(`project ${p.id} (${l}): section "${sec.id}" states numbers without a source note`);
+        }
+        if (sec.source) checkDate(`project ${p.id} section ${sec.id}.source`, sec.source.retrievedAt);
+      }
+      if (l !== 'zh') {
+        const zhIds = (bundle.locales.zh.projects[p.id]?.sections ?? []).map((x) => x.id).join();
+        if (ids.join() !== zhIds) err(`project ${p.id}: section ids differ between zh and ${l}`);
+      }
     }
   }
   for (const e of bundle.experience) {
@@ -169,7 +208,12 @@ export function validateContent(bundle: ContentBundle, options: ValidateOptions 
       if (e.end < e.start) err(`experience ${e.id}: end before start`);
     }
   }
-  for (const a of bundle.awards) checkDate(`award ${a.id}.date`, a.date);
+  for (const a of bundle.awards) {
+    checkDate(`award ${a.id}.date`, a.date);
+    if (a.participation !== 'individual' && a.participation !== 'team') {
+      err(`award ${a.id}: participation must be individual or team`);
+    }
+  }
 
   // --- homepage order --------------------------------------------------------------------
   for (const [name, items] of [
@@ -182,12 +226,56 @@ export function validateContent(bundle: ContentBundle, options: ValidateOptions 
   }
 
   // --- references ------------------------------------------------------------------------
-  for (const f of bundle.focus) {
-    if (f.projectId && !bundle.projects.some((p) => p.id === f.projectId)) {
-      err(`focus ${f.id}: unknown project "${f.projectId}"`);
+  const projectIds = new Set(bundle.projects.map((p) => p.id));
+  const repoIds = new Set(bundle.repositories.map((r) => r.id));
+  const pubIds = new Set(bundle.publications.map((p) => p.id));
+  const refs = (where: string, ids: string[] | undefined, known: Set<string>, kind: string) => {
+    for (const id of ids ?? []) if (!known.has(id)) err(`${where}: unknown ${kind} "${id}"`);
+  };
+  for (const d of bundle.directions) {
+    refs(`direction ${d.id}`, d.projectIds, projectIds, 'project');
+    refs(`direction ${d.id}`, d.publicationIds, pubIds, 'publication');
+    if (d.projectIds.length + (d.publicationIds?.length ?? 0) === 0) err(`direction ${d.id}: no public work behind it`);
+  }
+  for (const p of bundle.publications) refs(`publication ${p.id}`, p.directionIds, new Set(bundle.directions.map((d) => d.id)), 'direction');
+  for (const e of bundle.experience) refs(`experience ${e.id}`, e.relatedProjectIds, projectIds, 'project');
+  for (const a of bundle.awards) refs(`award ${a.id}`, a.relatedProjectIds, projectIds, 'project');
+  for (const l of LOCALES) {
+    for (const step of bundle.locales[l].person.researchModel) {
+      refs(`locale ${l} researchModel "${step.title}"`, step.projectIds, projectIds, 'project');
     }
-    if (f.publicationId && !bundle.publications.some((p) => p.id === f.publicationId)) {
-      err(`focus ${f.id}: unknown publication "${f.publicationId}"`);
+  }
+
+  // --- repositories: deduplicated, consistent with projects, no popularity metrics -------------
+  const seenRepo = new Map<string, string>();
+  for (const r of bundle.repositories) {
+    const key = `${r.owner}/${r.name}`.toLowerCase();
+    if (seenRepo.has(key)) err(`repository ${r.id}: duplicates ${seenRepo.get(key)} (${key})`);
+    seenRepo.set(key, r.id);
+    if (r.url.toLowerCase() !== `https://github.com/${key}`) err(`repository ${r.id}: url does not match owner/name`);
+    if (r.projectIds.length === 0) err(`repository ${r.id}: not linked to any project`);
+    refs(`repository ${r.id}`, r.projectIds, projectIds, 'project');
+    for (const pid of r.projectIds) {
+      const code = bundle.projects.find((p) => p.id === pid)?.resources.code;
+      if (code && code.toLowerCase() !== r.url.toLowerCase()) err(`repository ${r.id}: project ${pid} links a different code URL`);
+    }
+    if (r.languages.length === 0) err(`repository ${r.id}: list at least the primary language`);
+    checkDate(`repository ${r.id}.createdAt`, r.createdAt);
+    checkDate(`repository ${r.id}.source.retrievedAt`, r.source.retrievedAt);
+    for (const k of FORBIDDEN_REPO_KEYS) if (k in r) err(`repository ${r.id}: must not store "${k}"`);
+  }
+
+  // --- skills need evidence ----------------------------------------------------------------
+  for (const g of bundle.skills) {
+    if (g.skills.length === 0) err(`skill group ${g.id}: empty group`);
+    for (const sk of g.skills) {
+      if (sk.projectIds.length + (sk.repositoryIds?.length ?? 0) === 0) err(`skill ${sk.id}: no evidence`);
+      refs(`skill ${sk.id}`, sk.projectIds, projectIds, 'project');
+      refs(`skill ${sk.id}`, sk.repositoryIds, repoIds, 'repository');
+      if (SKILLS_NEEDING_EVIDENCE.includes(sk.name)) {
+        const used = sk.projectIds.some((id) => bundle.projects.find((p) => p.id === id)?.techStack?.includes(sk.name));
+        if (!used) err(`skill ${sk.id}: "${sk.name}" is not in the tech stack of any evidence project`);
+      }
     }
   }
 
@@ -195,6 +283,8 @@ export function validateContent(bundle: ContentBundle, options: ValidateOptions 
   const entityMaps = {
     publications: bundle.publications.map((x) => x.id),
     projects: bundle.projects.map((x) => x.id),
+    repositories: bundle.repositories.map((x) => x.id),
+    directions: bundle.directions.map((x) => x.id),
     experience: bundle.experience.map((x) => x.id),
     awards: bundle.awards.map((x) => x.id),
     skillGroups: bundle.skills.map((x) => x.id),
@@ -206,10 +296,8 @@ export function validateContent(bundle: ContentBundle, options: ValidateOptions 
       for (const id of ids) if (!map[id]) err(`locale ${locale}: missing ${name} text for "${id}"`);
       for (const id of Object.keys(map)) if (!ids.includes(id)) err(`locale ${locale}: orphan ${name} text "${id}"`);
     }
-    for (const f of bundle.focus) {
-      if (!loc.person.focus[f.id]) err(`locale ${locale}: missing focus text "${f.id}"`);
-    }
-    if (loc.person.intro.length === 0) err(`locale ${locale}: empty introduction`);
+    if (!loc.person.intro.trim()) err(`locale ${locale}: empty introduction`);
+    if (loc.person.tagline.length === 0) err(`locale ${locale}: empty tagline`);
     const emptyUi = findEmptyStrings(loc.ui, 'ui');
     for (const path of emptyUi) err(`locale ${locale}: empty UI text at ${path}`);
   }

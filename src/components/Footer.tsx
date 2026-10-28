@@ -11,26 +11,17 @@ export function Footer() {
   const years = endYear > site.copyrightStartYear ? `${site.copyrightStartYear}–${endYear}` : String(site.copyrightStartYear);
 
   return (
-    <footer id="contact" className="site-footer section-gap border-t border-sep">
-      <div className="shell py-8">
-        <h2 className="t-h2">{ui.sections.contact}</h2>
-        {person.email && (
-          <p className="t-body mt-3">
-            <a href={`mailto:${person.email}`} className="prose-link break-url">{person.email}</a>
-          </p>
-        )}
+    <footer className="site-footer border-t border-border bg-surface">
+      <div className="page-wrap flex flex-col gap-2 py-8 sm:flex-row sm:items-center sm:justify-between">
+        <MetaLine
+          className="t-caption"
+          items={[ui.footer.copyright(years, person.displayName), ui.footer.updatedAt(formatDate(site.updatedAt, locale))]}
+        />
         <ResourceRow
-          className="mt-1"
           items={resources([
             [ui.resources.github, person.links.github],
             [ui.resources.blog, person.links.blog],
-            [ui.resources.scholar, person.links.scholar],
-            [ui.resources.orcid, person.links.orcid],
           ])}
-        />
-        <MetaLine
-          className="t-caption mt-4"
-          items={[ui.footer.copyright(years, person.displayName), ui.footer.updatedAt(formatDate(site.updatedAt, locale))]}
         />
       </div>
     </footer>

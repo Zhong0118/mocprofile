@@ -1,0 +1,30 @@
+{
+  "source": "https://www.moclab.top/rss.xml",
+  "retrievedAt": "2026-10-28",
+  "items": [
+    {
+      "title": "在 DeepSeek Harness 中通过 SSH 使用远程服务器：dsh-remote-ssh 配置与排障指南",
+      "url": "https://www.moclab.top/posts/tool/dsh-ssh/",
+      "date": "2026-08-23",
+      "description": "介绍 dsh-remote-ssh 的工作方式、权限模型与服务器依赖，并记录远程工作区、后端模式和连接排障要点。"
+    },
+    {
+      "title": "Codex、Claude Code、Claude Desktop 与 CC Switch：账号、API、配置和同步逻辑",
+      "url": "https://www.moclab.top/posts/tool/codex_claudecode_claudedesktop_cc-switch_%E6%95%99%E7%A8%8B/",
+      "date": "2026-08-06",
+      "description": "梳理 Codex、Claude Code、Claude Desktop 与 CC Switch 的账号登录、API 模式、客户端配置和同步关系。"
+    },
+    {
+      "title": "你真的会用Fork和分支吗",
+      "url": "https://www.moclab.top/posts/tool/fork/",
+      "date": "2026-06-23",
+      "description": "从本地仓库、origin 与 upstream 的关系出发，梳理 Fork 同步、分支隔离、Merge 与常见协作流程。"
+    },
+    {
+      "title": "算法学习指南一：哈希",
+      "url": "https://www.moclab.top/posts/algorithm/notes/hash/",
+      "date": "2026-06-12",
+      "description": "整理取模映射、哈希冲突、扩容思路，以及几种字符串哈希函数的实现笔记。"
+    }
+  ]
+}

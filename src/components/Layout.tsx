@@ -3,6 +3,9 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 import { useSite } from '@/site/context';
 import { matchRoute } from '@/routing/manifest';
 import { getPageMeta } from '@/routing/meta';
+import { markHydrated } from '@/site/hydration';
+import { rememberOrigin } from '@/site/nav-memory';
+import { playSharedTransition } from '@/site/shared-element';
 import { Footer } from './Footer';
 import { Header } from './Header';
 
@@ -12,7 +15,10 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
 const SCROLL_KEY = 'scroll-positions';
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function loadPositions(): Record<string, { y: number; focus?: string }> {
+/** Saved reading position, plus the link that left the page (href and which of the same-href links). */
+type Saved = { y: number; focus?: string; focusIndex?: number };
+
+function loadPositions(): Record<string, Saved> {
   try {
     return JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? '{}');
   } catch {
@@ -24,15 +30,16 @@ function loadPositions(): Record<string, { y: number; focus?: string }> {
  * Scroll and focus rules:
  * - first load / refresh: the static page is already visible; restore a saved position on reload.
  * - PUSH without hash: start at the top and move focus to the new page.
+ * - PUSH/REPLACE on the same path without hash (filters in the query): leave scroll and focus alone.
  * - PUSH/REPLACE with hash: go to the target (short smooth scroll within the same page).
  * - POP (back/forward): restore the saved position and the link that was activated.
  */
 function useScrollManagement() {
   const location = useLocation();
   const navType = useNavigationType();
-  const positions = useRef<Record<string, { y: number; focus?: string }>>({});
-  const previous = useRef<{ key: string; pathname: string } | null>(null);
-  const lastLink = useRef<string | undefined>(undefined);
+  const positions = useRef<Record<string, Saved>>({});
+  const previous = useRef<{ key: string; pathname: string; search: string } | null>(null);
+  const lastLink = useRef<{ href: string; index: number } | undefined>(undefined);
   const currentKey = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -46,7 +53,10 @@ function useScrollManagement() {
     };
     const onClick = (e: MouseEvent) => {
       const a = (e.target as Element | null)?.closest?.('a[href]');
-      lastLink.current = a?.getAttribute('href') ?? undefined;
+      const href = a?.getAttribute('href');
+      lastLink.current = href
+        ? { href, index: [...document.querySelectorAll(`a[href="${CSS.escape(href)}"]`)].indexOf(a!) }
+        : undefined;
       record();
     };
     const persist = () => {
@@ -59,25 +69,32 @@ function useScrollManagement() {
     };
     document.addEventListener('click', onClick, true);
     window.addEventListener('scroll', record, { passive: true });
-    window.addEventListener('popstate', record, true);
+    const onPopState = () => record();
+    markHydrated();
+    window.addEventListener('popstate', onPopState, true);
     window.addEventListener('pagehide', persist);
     return () => {
       document.removeEventListener('click', onClick, true);
       window.removeEventListener('scroll', record);
-      window.removeEventListener('popstate', record, true);
+      window.removeEventListener('popstate', onPopState, true);
       window.removeEventListener('pagehide', persist);
     };
   }, []);
 
   useIsoLayoutEffect(() => {
     const prev = previous.current;
-    previous.current = { key: location.key, pathname: location.pathname };
+    previous.current = { key: location.key, pathname: location.pathname, search: location.search };
     currentKey.current = location.key;
+    const reduce = prefersReducedMotion();
 
     if (prev) {
       // The new page is already in the DOM, so window.scrollY may be clamped; keep the position
       // recorded by the scroll listener and only add the link that started the navigation.
-      positions.current[prev.key] = { y: positions.current[prev.key]?.y ?? 0, focus: lastLink.current };
+      positions.current[prev.key] = {
+        y: positions.current[prev.key]?.y ?? 0,
+        focus: lastLink.current?.href,
+        focusIndex: lastLink.current?.index,
+      };
     }
 
     const hashTarget = () => {
@@ -103,24 +120,29 @@ function useScrollManagement() {
       else if (target) target.scrollIntoView();
       else window.scrollTo(0, 0);
       if (saved?.focus) {
-        const link = document.querySelector<HTMLElement>(`a[href="${CSS.escape(saved.focus)}"]`);
+        const links = document.querySelectorAll<HTMLElement>(`a[href="${CSS.escape(saved.focus)}"]`);
+        const link = links[saved.focusIndex ?? 0] ?? links[0];
         link?.focus({ preventScroll: true });
       }
+      if (prev.pathname !== location.pathname) playSharedTransition(reduce);
       return;
     }
+
+    if (navType === 'PUSH') rememberOrigin(location.key, prev.pathname + prev.search);
 
     const target = hashTarget();
     if (target) {
       const samePage = prev.pathname === location.pathname;
-      target.scrollIntoView({ behavior: samePage && !prefersReducedMotion() ? 'smooth' : 'auto' });
+      target.scrollIntoView({ behavior: samePage && !reduce ? 'smooth' : 'auto' });
       if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });
       return;
     }
+    // Query-only changes (filters, view) keep the reader where they are.
+    if (prev.pathname === location.pathname) return;
     window.scrollTo(0, 0);
-    if (prev.pathname !== location.pathname) {
-      document.getElementById('main')?.focus({ preventScroll: true });
-    }
+    document.getElementById('main')?.focus({ preventScroll: true });
+    playSharedTransition(reduce);
   }, [location.key]);
 }
 

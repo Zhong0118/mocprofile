@@ -9,14 +9,15 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const serverEntry = path.join(root, 'dist-server', 'entry-server.js');
 
-const { render, content, buildRouteManifest, getPageMeta, validateContent } = await import(
+const { render, content, buildRouteManifest, getPageMeta, validateContent, findTemplateResidue } = await import(
   pathToFileURL(serverEntry).href
 );
 
-// 1. Content checks fail the build.
-const errors = validateContent(content, {
-  assetExists: (p) => fs.existsSync(path.join(root, 'public', p)),
-});
+// 1. Content checks fail the build: structure and references, then template residue.
+const errors = [
+  ...validateContent(content, { assetExists: (p) => fs.existsSync(path.join(root, 'public', p)) }),
+  ...findTemplateResidue(content),
+];
 if (errors.length) {
   console.error('Content validation failed:\n' + errors.map((e) => `  - ${e}`).join('\n'));
   process.exit(1);

@@ -1,18 +1,23 @@
 // Route manifest: the only list of public pages. Prerendering, sitemap, metadata and
 // the content checks all derive from it, so a page cannot exist in one place and not another.
-import { LOCALES, type ContentBundle, type Locale } from '@/content/types';
-import { findProjectDetail, findPublicationDetail, hasCv } from '@/content/selectors';
+// Index pages exist whenever their module is enabled, even with no entries (they show an empty state).
+import { LOCALES, type ContentBundle, type Locale, type ModuleId } from '@/content/types';
+import { findProjectDetail, findPublicationDetail, isModuleEnabled } from '@/content/selectors';
 import {
+  aboutPath,
   cvPath,
   homePath,
   localeFromPath,
   projectPath,
+  projectsPath,
   publicationPath,
+  publicationsPath,
+  repositoriesPath,
   stripLocale,
   withLocale,
 } from './paths';
 
-export type RouteKind = 'home' | 'cv' | 'project' | 'publication';
+export type RouteKind = 'home' | 'about' | 'projects' | 'publications' | 'repositories' | 'cv' | 'project' | 'publication';
 
 export interface RouteEntry {
   path: string;
@@ -22,23 +27,28 @@ export interface RouteEntry {
   alternates: Record<Locale, string>;
 }
 
+const INDEX_PAGES: [RouteKind, ModuleId, (l: Locale) => string][] = [
+  ['about', 'about', aboutPath],
+  ['projects', 'projects', projectsPath],
+  ['publications', 'publications', publicationsPath],
+  ['repositories', 'repositories', repositoriesPath],
+  ['cv', 'cv', cvPath],
+];
+
 export function buildRouteManifest(bundle: ContentBundle): RouteEntry[] {
   const entries: RouteEntry[] = [];
   const add = (kind: RouteKind, pathFor: (l: Locale) => string, id?: string) => {
-    const alternates = Object.fromEntries(LOCALES.map((l) => [l, pathFor(l)])) as Record<
-      Locale,
-      string
-    >;
+    const alternates = Object.fromEntries(LOCALES.map((l) => [l, pathFor(l)])) as Record<Locale, string>;
     for (const locale of LOCALES) entries.push({ path: alternates[locale], locale, kind, id, alternates });
   };
 
   add('home', homePath);
-  if (hasCv(bundle)) add('cv', cvPath);
-  for (const p of bundle.publications.filter((p) => p.detail)) {
-    add('publication', (l) => publicationPath(l, p.id), p.id);
+  for (const [kind, module, pathFor] of INDEX_PAGES) if (isModuleEnabled(bundle, module)) add(kind, pathFor);
+  if (isModuleEnabled(bundle, 'publications')) {
+    for (const p of bundle.publications.filter((p) => p.detail)) add('publication', (l) => publicationPath(l, p.id), p.id);
   }
-  for (const p of bundle.projects.filter((p) => p.detail)) {
-    add('project', (l) => projectPath(l, p.id), p.id);
+  if (isModuleEnabled(bundle, 'projects')) {
+    for (const p of bundle.projects.filter((p) => p.detail)) add('project', (l) => projectPath(l, p.id), p.id);
   }
   return entries;
 }

@@ -56,6 +56,24 @@ export function getPageMeta(bundle: ContentBundle, entry: RouteEntry | undefined
         },
       };
     }
+    case 'about':
+      return { ...base, title: ui.meta.pageTitle(ui.modules.about, name), description: ui.meta.aboutDescription, ogType: 'profile' };
+    case 'projects':
+      return { ...base, title: ui.meta.pageTitle(ui.modules.projects, name), description: ui.meta.projectsDescription, ogType: 'website' };
+    case 'publications':
+      return {
+        ...base,
+        title: ui.meta.pageTitle(ui.modules.publications, name),
+        description: ui.meta.publicationsDescription,
+        ogType: 'website',
+      };
+    case 'repositories':
+      return {
+        ...base,
+        title: ui.meta.pageTitle(ui.modules.repositories, name),
+        description: ui.meta.repositoriesDescription,
+        ogType: 'website',
+      };
     case 'cv':
       return { ...base, title: ui.meta.cvTitle(name), description: ui.meta.cvDescription(name), ogType: 'website' };
     case 'project': {
@@ -63,7 +81,7 @@ export function getPageMeta(bundle: ContentBundle, entry: RouteEntry | undefined
       const text = bundle.locales[locale].projects[project.id];
       return {
         ...base,
-        title: `${project.name} · ${ui.nav.projects} · ${name}`,
+        title: `${project.name} · ${ui.modules.projects} · ${name}`,
         description: firstSentence(text.summary),
         ogType: 'article',
       };

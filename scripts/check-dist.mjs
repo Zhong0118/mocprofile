@@ -54,17 +54,43 @@ for (const entry of manifest) {
   expect((html.match(/<h1[\s>]/g) ?? []).length === 1, 'must contain exactly one <h1>');
   expect(!html.includes('<!--app-html-->') && !html.includes('<!--app-head-->'), 'unfilled placeholder');
 
+  const modules = t.ui.modules;
   if (entry.kind === 'home') {
     expect(text.includes(content.person.displayName), 'display name not in body');
-    expect(text.includes(t.person.intro[0].slice(0, 20)), 'introduction not in body');
+    expect(text.includes(t.person.intro.slice(0, 20)), 'introduction not in body');
     for (const p of content.projects.filter((p) => p.homepageOrder !== undefined)) {
       expect(text.includes(p.name), `featured project ${p.name} not in body`);
     }
+    // Every enabled module is present, with entries or an empty state.
+    for (const [id, title] of Object.entries(modules)) {
+      if (id === 'about' || !content.site.modules[id].enabled) continue;
+      expect(text.includes(title), `module "${id}" missing from the homepage`);
+    }
+    for (const anchor of ['about', 'research', 'projects', 'publications', 'skills', 'github', 'experience', 'awards', 'cv', 'contact']) {
+      expect(html.includes(`id="${anchor}"`), `homepage anchor #${anchor} missing`);
+    }
+  }
+  if (entry.kind === 'about') {
+    for (const anchor of ['skills', 'education', 'experience', 'awards', 'contact']) {
+      expect(html.includes(`id="${anchor}"`), `about anchor #${anchor} missing`);
+    }
+  }
+  if (entry.kind === 'projects') {
+    for (const p of content.projects) expect(text.includes(p.name), `directory misses project ${p.name}`);
+  }
+  if (entry.kind === 'repositories') {
+    for (const r of content.repositories) expect(text.includes(r.name), `repositories page misses ${r.name}`);
+  }
+  if (entry.kind === 'publications') {
+    if (content.publications.length === 0) expect(text.includes(t.ui.emptyState), 'empty publications page lacks the empty state');
+    for (const p of content.publications) expect(text.includes(p.originalTitle), `publications page misses ${p.id}`);
   }
   if (entry.kind === 'cv') {
     for (const p of content.projects) expect(text.includes(p.name), `CV misses project ${p.name}`);
     for (const p of content.publications) expect(text.includes(p.originalTitle), `CV misses publication ${p.id}`);
   }
+  // Prerendered content must be visible without JavaScript: nothing parked at opacity 0.
+  expect(!/style="[^"]*opacity:\s*0[;"]/.test(html), 'content rendered with opacity 0');
   if (entry.kind === 'project') {
     const p = content.projects.find((x) => x.id === entry.id);
     expect(text.includes(p.name), 'project name not in body');
@@ -85,7 +111,13 @@ for (const file of files) {
   const body = read(file);
   for (const marker of TEMPLATE_MARKERS) if (body.includes(marker)) fail(`${rel}: contains template marker "${marker}"`);
   if (body.includes('fixture.invalid')) fail(`${rel}: contains fixture data`);
+  if (body.includes('__content-review__') || body.includes('Content review')) fail(`${rel}: contains the dev-only review page`);
+  if (/stargazers|"stars"/.test(body)) fail(`${rel}: contains repository popularity metrics`);
   if (rel.endsWith('.html') && body.includes('/vite.svg')) fail(`${rel}: references /vite.svg`);
+  // Tailwind's built-in page-width utility (width: 100%) would fight the padded .page-wrap and overflow.
+  // The class name is assembled so that Tailwind's source scan does not pick it up from this file.
+  const twWidthUtility = ['contain', 'er'].join('');
+  if (rel.endsWith('.css') && body.includes(`.${twWidthUtility}{`)) fail(`${rel}: emits Tailwind's ${twWidthUtility} utility; use .page-wrap`);
 }
 
 // --- 404 ------------------------------------------------------------------------------------

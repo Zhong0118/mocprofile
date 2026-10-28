@@ -52,10 +52,8 @@ export function ThemeToggle() {
 
   return (
     <button type="button" className="icon-button js-only inline-flex" aria-pressed={dark} aria-label={t.ui.theme.label} onClick={toggle}>
-      <span className="press">
-        <Moon className="theme-icon-light" size={19} strokeWidth={1.75} aria-hidden="true" />
-        <Sun className="theme-icon-dark" size={19} strokeWidth={1.75} aria-hidden="true" />
-      </span>
+      <Moon className="theme-icon-light" size={20} strokeWidth={1.85} aria-hidden="true" />
+      <Sun className="theme-icon-dark" size={20} strokeWidth={1.85} aria-hidden="true" />
     </button>
   );
 }
