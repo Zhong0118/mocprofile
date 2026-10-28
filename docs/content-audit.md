@@ -83,6 +83,6 @@
 7. 可选：真实肖像、项目截图或研究图。
 8. 可选：CV PDF、文件语言和最后内容更新时间。
 9. 可选：公开联系邮箱、Google Scholar / ORCID 个人页。
-10. 确认生产域名。`site.url`（canonical、sitemap）仍为 https://mocprofile.vercel.app；2026-10-28 检查时 https://academic.moclab.top 指向同一部署。无法在不访问 Vercel 项目设置的情况下判断哪个是主域名，因此本轮没有修改 `site.url`、DNS 或 Vercel 配置。作者确认后只需改 `records.ts` 的 `site.url`。
+10. ~~确认生产域名~~ 已确认（2026-10-28，作者）：`site.url`（canonical、sitemap）保持 https://mocprofile.vercel.app。https://academic.moclab.top 指向同一部署，但不作为 canonical；未改 DNS 或 Vercel 配置。
 11. 核对研究方向、标语、研究方式与项目英文说明的措辞。
 12. 可选：AgentGuard-Chain、EvoTeam 之外，哪些项目值得写案例详情页。
